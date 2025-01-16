@@ -31,7 +31,7 @@ class ALUControl extends Module {
           InstructionsTypeI.ori   -> ALUFunctions.or,
           InstructionsTypeI.andi  -> ALUFunctions.and,
           InstructionsTypeI.sri   -> Mux(io.funct7(5), ALUFunctions.sra, ALUFunctions.srl)
-        ),
+        )
       )
     }
     is(InstructionTypes.RM) {

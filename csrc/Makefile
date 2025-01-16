@@ -22,10 +22,8 @@ OBJCOPY := $(CROSS_COMPILE)objcopy
 	$(OBJCOPY) -O binary -j .text -j .data $< $@
 
 BINS = \
+
 	fibonacci.asmbin \
-	hello.asmbin \
-	mmio.asmbin \
-	quicksort.asmbin \
 	sb.asmbin
 
 # Clear the .DEFAULT_GOAL special variable, so that the following turns

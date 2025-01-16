@@ -14,12 +14,19 @@ class WriteBack extends Module {
     val memory_read_data    = Input(UInt(Parameters.DataWidth))
     val regs_write_source   = Input(UInt(2.W))
     val regs_write_data     = Output(UInt(Parameters.DataWidth))
+  //final project
+    val csr_read_data       = Input(UInt(Parameters.DataWidth))
+  //final end
   })
+
   io.regs_write_data := MuxLookup(
     io.regs_write_source,
     io.alu_result,
     IndexedSeq(
       RegWriteSource.Memory                 -> io.memory_read_data,
+    //final project (object in InstructionDecode)
+      RegWriteSource.CSR                    -> io.csr_read_data,
+    //final end
       RegWriteSource.NextInstructionAddress -> (io.instruction_address + 4.U)
     )
   )

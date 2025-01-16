@@ -13,8 +13,11 @@ object InstructionTypes {
   val L  = "b0000011".U
   val I  = "b0010011".U
   val S  = "b0100011".U
-  val RM = "b0110011".U
   val B  = "b1100011".U
+
+//final Project (M)
+  val RM  = "b0110011".U
+//final end
 }
 
 object Instructions {
@@ -23,7 +26,9 @@ object Instructions {
   val jal   = "b1101111".U
   val jalr  = "b1100111".U
   val auipc = "b0010111".U
+//final Project (csr)
   val csr   = "b1110011".U
+//final end
   val fence = "b0001111".U
 }
 
@@ -119,7 +124,7 @@ object ALUOp2Source {
 object RegWriteSource {
   val ALUResult = 0.U(2.W)
   val Memory    = 1.U(2.W)
-  // val CSR = 2.U(2.W)
+  val CSR       = 2.U(2.W)
   val NextInstructionAddress = 3.U(2.W)
 }
 
@@ -129,14 +134,20 @@ class InstructionDecode extends Module {
 
     val regs_reg1_read_address = Output(UInt(Parameters.PhysicalRegisterAddrWidth))
     val regs_reg2_read_address = Output(UInt(Parameters.PhysicalRegisterAddrWidth))
-    val ex_immediate           = Output(UInt(Parameters.DataWidth))
+
     val ex_aluop1_source       = Output(UInt(1.W))
     val ex_aluop2_source       = Output(UInt(1.W))
+    val ex_immediate           = Output(UInt(Parameters.DataWidth))
     val memory_read_enable     = Output(Bool())
     val memory_write_enable    = Output(Bool())
+
     val wb_reg_write_source    = Output(UInt(2.W))
     val reg_write_enable       = Output(Bool())
     val reg_write_address      = Output(UInt(Parameters.PhysicalRegisterAddrWidth))
+
+    //final project
+    val ex_csr_write_enable    = Output(Bool())
+    val ex_csr_address         = Output(UInt(Parameters.CSRRegisterAddrWidth))
   })
   val opcode = io.instruction(6, 0)
   val funct3 = io.instruction(14, 12)
@@ -147,6 +158,7 @@ class InstructionDecode extends Module {
 
   io.regs_reg1_read_address := Mux(opcode === Instructions.lui, 0.U(Parameters.PhysicalRegisterAddrWidth), rs1)
   io.regs_reg2_read_address := rs2
+
   val immediate = MuxLookup(
     opcode,
     Cat(Fill(20, io.instruction(31)), io.instruction(31, 20)),
@@ -155,26 +167,23 @@ class InstructionDecode extends Module {
       InstructionTypes.L -> Cat(Fill(21, io.instruction(31)), io.instruction(30, 20)),
       Instructions.jalr  -> Cat(Fill(21, io.instruction(31)), io.instruction(30, 20)),
       InstructionTypes.S -> Cat(Fill(21, io.instruction(31)), io.instruction(30, 25), io.instruction(11, 7)),
-      InstructionTypes.B -> Cat(
-        Fill(20, io.instruction(31)),
-        io.instruction(7),
-        io.instruction(30, 25),
-        io.instruction(11, 8),
-        0.U(1.W)
-      ),
+      InstructionTypes.B -> Cat(Fill(20, io.instruction(31)), io.instruction(7), io.instruction(30, 25),
+        io.instruction(11, 8),0.U(1.W)),
       Instructions.lui   -> Cat(io.instruction(31, 12), 0.U(12.W)),
       Instructions.auipc -> Cat(io.instruction(31, 12), 0.U(12.W)),
       // jal's imm represents a multiple of 2 bytes.
-      Instructions.jal -> Cat(
-        Fill(12, io.instruction(31)),
-        io.instruction(19, 12),
-        io.instruction(20),
-        io.instruction(30, 21),
-        0.U(1.W)
-      )
+      Instructions.jal   -> Cat(Fill(12, io.instruction(31)), io.instruction(19, 12), io.instruction(20),
+        io.instruction(30, 21),0.U(1.W)),
+    //final project
+      // M extension
+      //InstructionTypes.RM -> Cat()
+      //CSR
+      Instructions.csr    -> Cat(Fill(21, io.instruction(31)),io.instruction(30, 20))
+    //final project end 
     )
   )
   io.ex_immediate := immediate
+  
   io.ex_aluop1_source := Mux(
     opcode === Instructions.auipc || opcode === InstructionTypes.B || opcode === Instructions.jal,
     ALUOp1Source.InstructionAddress,
@@ -195,17 +204,16 @@ class InstructionDecode extends Module {
   )
 
   // lab3(InstructionDecode) begin
-  io.memory_read_enable := Mux(
-    opcode === InstructionTypes.L, 
-    1.U(1.W), 0.U(1.W)
-  )
-
-  io.memory_write_enable := Mux(
-    opcode === InstructionTypes.S,
-    1.U(1.W), 0.U(1.W)
-  )
+    io.memory_read_enable := Mux(
+    	opcode === InstructionTypes.L,
+    	1.U(1.W), 0.U(1.W)
+    )
+    io.memory_write_enable := Mux(
+        opcode === InstructionTypes.S,
+        1.U(1.W), 0.U(1.W)
+    )  
   // lab3(InstructionDecode) end
-
+  
   io.wb_reg_write_source := MuxCase(
     RegWriteSource.ALUResult,
     ArraySeq(
@@ -219,5 +227,18 @@ class InstructionDecode extends Module {
   io.reg_write_enable := (opcode === InstructionTypes.RM) || (opcode === InstructionTypes.I) ||
     (opcode === InstructionTypes.L) || (opcode === Instructions.auipc) || (opcode === Instructions.lui) ||
     (opcode === Instructions.jal) || (opcode === Instructions.jalr)
+  
   io.reg_write_address := rd
+
+  //final project
+  io.ex_csr_address := io.instruction(31, 20)
+
+  io.ex_csr_write_enable := (opcode === Instructions.csr) &&
+    (funct3 === InstructionsTypeCSR.csrrw || funct3 === InstructionsTypeCSR.csrrs ||
+    funct3 === InstructionsTypeCSR.csrrc || funct3 === InstructionsTypeCSR.csrrwi ||
+    funct3 === InstructionsTypeCSR.csrrsi || funct3 === InstructionsTypeCSR.csrrci
+    )
 }
+
+
+

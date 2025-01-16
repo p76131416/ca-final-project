@@ -17,13 +17,18 @@ class Top extends Module {
   val cpu = Module(new CPU)
 
   io.deviceSelect           := 0.U
-  cpu.io.debug_read_address := io.debug_read_address
-  io.debug_read_data        := cpu.io.debug_read_data
+
+  cpu.io.regs_debug_read_address := io.regs_debug_read_address
+  io.regs_debug_read_data := cpu.io.regs_debug_read_data
+  
+  cpu.io.csr_regs_debug_read_address := io.csr_regs_debug_read_address
+  io.csr_regs_debug_read_data := cpu.io.csr_regs_debug_read_data
 
   io.memory_bundle <> cpu.io.memory_bundle
   io.instruction_address := cpu.io.instruction_address
-  cpu.io.instruction     := io.instruction
+  cpu.io.instruction := io.instruction
 
+  cpu.io.Interrupt_Flag := io.Interrupt_Flag
   cpu.io.instruction_valid := io.instruction_valid
 }
 
